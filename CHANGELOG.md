@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+- Critical app protection lists every app again: HyperFCM now asks for the HyperOS "read installed apps" permission, reloads the list each time the dialog opens and shows how to grant the permission if HyperOS still hides apps.
+
 ## 1.0.0
 
 First release as HyperFCM, a HyperOS-only module.

@@ -53,6 +53,7 @@ private const val TAG = "HyperFCM-ui"
 private const val ACTION_UPDATE_CONFIG = "io.github.kenanjkm.hyperfcm.update.config"
 private const val ACTION_STATUS_REQUEST = "io.github.kenanjkm.hyperfcm.status.request"
 private const val CONFIG_PERMISSION = "io.github.kenanjkm.hyperfcm.permission.CONFIG"
+private const val APP_LIST_PERMISSION = "com.android.permission.GET_INSTALLED_APPS"
 private const val PROJECT_URL = "https://github.com/kenanjkm/HyperFCM"
 
 data class ModuleConfig(
@@ -163,6 +164,8 @@ class MainActivity : ComponentActivity() {
     private var installedApps = androidx.compose.runtime.mutableStateOf<List<InstalledApp>>(emptyList())
     private var appsLoadingJob: Job? = null
     private var launcherIconHidden = androidx.compose.runtime.mutableStateOf(false)
+    /** Bumped when the app-list permission changes, so open lists reload. */
+    private val appListGeneration = androidx.compose.runtime.mutableIntStateOf(0)
     private val launcherAliasComponent by lazy {
         ComponentName(packageName, "$packageName.LauncherAlias")
     }
@@ -193,6 +196,7 @@ class MainActivity : ComponentActivity() {
         contentResolver.registerContentObserver(Uri.parse("content://$packageName.provider/hookStatus"), false, hookStatusObserver)
         loadHookReport()
         if (uiState.value.config.includeIceBoxDisabledApps) requestIceBoxPermissionIfNeeded()
+        requestAppListPermissionIfNeeded()
         requestNotificationPermissionIfNeeded()
         ConfigMemory.bindXposedService()
         lifecycleScope.launch {
@@ -216,6 +220,7 @@ class MainActivity : ComponentActivity() {
                     onOpenDiagnostics = ::openGmsDiagnostics,
                     onOpenProject = ::openProjectPage,
                     onReloadApps = ::loadInstalledApps,
+                    appListGeneration = appListGeneration.intValue,
                     onRefreshStatus = ::requestHookStatus,
                     onLeaveSafeMode = ::leaveSafeMode
                 )
@@ -297,6 +302,29 @@ class MainActivity : ComponentActivity() {
         } catch (error: Throwable) {
             Toast.makeText(this, getString(R.string.toast_icon_failed), Toast.LENGTH_SHORT).show()
             Log.e(TAG, "Could not change launcher icon visibility", error)
+        }
+    }
+
+    /**
+     * HyperOS hides other apps from the installed-app list until the user grants its own
+     * "read installed apps" permission. Without it both app lists come back incomplete.
+     */
+    private fun requestAppListPermissionIfNeeded() {
+        try {
+            val info = runCatching { packageManager.getPermissionInfo(APP_LIST_PERMISSION, 0) }.getOrNull() ?: return
+            if (info.protection != android.content.pm.PermissionInfo.PROTECTION_DANGEROUS) return
+            if (checkSelfPermission(APP_LIST_PERMISSION) == PackageManager.PERMISSION_GRANTED) return
+            requestPermissions(arrayOf(APP_LIST_PERMISSION), 3)
+        } catch (error: Throwable) {
+            Log.w(TAG, "App list permission request unavailable", error)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 3) {
+            appListGeneration.value++
+            loadInstalledApps(force = true)
         }
     }
 
@@ -514,8 +542,13 @@ class MainActivity : ComponentActivity() {
         .put(KEY_INCLUDE_ICEBOX_DISABLED_APP, includeIceBoxDisabledApps)
         .put(KEY_KEEP_GMS_AWAKE, keepGmsAwake)
 
-    private fun loadInstalledApps() {
-        if (appsLoadingJob?.isActive == true) return
+    private fun loadInstalledApps() = loadInstalledApps(force = false)
+
+    private fun loadInstalledApps(force: Boolean) {
+        if (appsLoadingJob?.isActive == true) {
+            if (!force) return
+            appsLoadingJob?.cancel()
+        }
         uiState.value = uiState.value.copy(appsLoading = true, appsLoadFailed = false)
         appsLoadingJob = lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {

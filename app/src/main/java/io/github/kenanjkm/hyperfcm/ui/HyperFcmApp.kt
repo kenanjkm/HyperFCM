@@ -116,6 +116,7 @@ fun HyperFcmApp(
     onOpenDiagnostics: () -> Unit,
     onOpenProject: () -> Unit,
     onReloadApps: () -> Unit,
+    appListGeneration: Int,
     onRefreshStatus: () -> Unit,
     onLeaveSafeMode: () -> Unit
 ) {
@@ -172,6 +173,7 @@ fun HyperFcmApp(
                 )
                 MainTab.SETTINGS -> SettingsPage(
                     bottomPadding = bottom,
+                    appListGeneration = appListGeneration,
                     state = state,
                     launcherIconHidden = launcherIconHidden,
                     onConfigChange = onConfigChange,
@@ -618,6 +620,7 @@ private fun EmptyState(title: String, message: String, onReload: (() -> Unit)?) 
 @Composable
 private fun SettingsPage(
     bottomPadding: androidx.compose.ui.unit.Dp,
+    appListGeneration: Int,
     state: ModuleUiState,
     launcherIconHidden: Boolean,
     onConfigChange: (ModuleConfig) -> Unit,
@@ -723,6 +726,7 @@ private fun SettingsPage(
 
     ProtectedAppsDialog(
         show = showProtected,
+        generation = appListGeneration,
         selected = config.protectedApps,
         onConfirm = { chosen ->
             showProtected = false
@@ -750,6 +754,7 @@ private fun DialogButtons(confirm: String, onCancel: () -> Unit, onConfirm: () -
 @Composable
 private fun ProtectedAppsDialog(
     show: Boolean,
+    generation: Int,
     selected: Set<String>,
     onConfirm: (Set<String>) -> Unit,
     onDismiss: () -> Unit
@@ -766,7 +771,10 @@ private fun ProtectedAppsDialog(
         val context = LocalContext.current
         var loaded by remember { mutableStateOf<List<InstalledApp>?>(null) }
         var query by remember { mutableStateOf("") }
-        LaunchedEffect(Unit) {
+        // Read again every time the dialog opens and after the app-list permission changes.
+        LaunchedEffect(show, generation) {
+            if (!show) return@LaunchedEffect
+            loaded = null
             loaded = withContext(Dispatchers.IO) { loadLaunchableApps(context, selected) }
         }
         val apps = loaded.orEmpty().filter {
@@ -781,6 +789,12 @@ private fun ProtectedAppsDialog(
                 useLabelAsPlaceholder = true,
                 singleLine = true
             )
+            // A handful of apps means HyperOS still hides the list: say how to fix it, keep the list below.
+            if (loaded != null && loaded.orEmpty().size < 15) Text(
+                stringResource(R.string.app_list_limited),
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.error
+            )
             when {
                 loaded == null -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
                     InfiniteProgressIndicator()
@@ -790,7 +804,7 @@ private fun ProtectedAppsDialog(
                     style = MiuixTheme.textStyles.body2,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                 )
-                else -> LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                else -> LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                     items(apps, key = { it.packageName }) { app ->
                         val checked = app.packageName in chosen
                         val toggle = { chosen = if (checked) chosen - app.packageName else chosen + app.packageName }
@@ -825,8 +839,13 @@ private fun loadLaunchableApps(context: android.content.Context, selected: Set<S
         .addCategory(android.content.Intent.CATEGORY_LAUNCHER)
     val collator = java.text.Collator.getInstance(java.util.Locale.getDefault())
     val size = (40 * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
-    return pm.queryIntentActivities(launcher, 0)
+    // Launcher query plus the installed-app list: either one alone can be filtered by HyperOS.
+    val fromLauncher = pm.queryIntentActivities(launcher, android.content.pm.PackageManager.MATCH_ALL)
         .mapNotNull { it.activityInfo?.applicationInfo }
+    @Suppress("DEPRECATION")
+    val fromInstalled = runCatching { pm.getInstalledApplications(0) }.getOrDefault(emptyList())
+        .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+    return (fromLauncher + fromInstalled)
         .distinctBy { it.packageName }
         .filter { it.packageName != context.packageName }
         .mapNotNull { info ->
