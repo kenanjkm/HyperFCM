@@ -1,0 +1,54 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+android {
+    namespace = "io.github.kenanjkm.hyperfcm"
+    compileSdk 37
+
+    defaultConfig {
+        applicationId "io.github.kenanjkm.hyperfcm"
+        // ClassValue (reflection cache) requires API 34.
+        minSdkVersion 34
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0.0"
+
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    // Android-compatible org.json implementation for JVM tests; the SDK jar contains stubs.
+    testImplementation 'com.vaadin.external.google:android-json:0.0.20131108.vaadin1'
+    compileOnly 'io.github.libxposed:api:102.0.0'
+    implementation 'io.github.libxposed:interface:102.0.0'
+    implementation 'io.github.libxposed:service:102.0.0'
+    // HyperOS-style UI: https://github.com/compose-miuix-ui/miuix
+    implementation 'top.yukonga.miuix.kmp:miuix-ui-android:0.9.4'
+    implementation 'top.yukonga.miuix.kmp:miuix-preference-android:0.9.4'
+    implementation 'top.yukonga.miuix.kmp:miuix-icons-android:0.9.4'
+    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.4'
+    implementation 'androidx.core:core-ktx:1.17.0'
+}

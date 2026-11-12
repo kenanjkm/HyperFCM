@@ -1,0 +1,9 @@
+HyperFCM bundles the following third-party work:
+
+- Miuix (https://github.com/compose-miuix-ui/miuix), Apache License 2.0
+- libxposed API/service (https://github.com/libxposed), Apache License 2.0
+- Material Symbols by Google (notification icon), Apache License 2.0 - see material-symbols.txt
+- AndroidX / Jetpack Compose, Apache License 2.0
+
+HyperFCM itself derives from kooritea/fcmfix (MIT License) through
+Artifical0/fcmfix-coloros, ByteJuno/fcmfix-coloros and zopulus/fcmfix-coloros17.

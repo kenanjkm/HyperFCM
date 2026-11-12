@@ -1,0 +1,225 @@
+package io.github.kenanjkm.hyperfcm.libxposed;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class XposedHelpers {
+
+    private XposedHelpers() {
+    }
+
+    // Actual Class keys preserve class-loader isolation and field shadowing.
+    private static final ClassValue<MemberCache> MEMBERS = new ClassValue<>() {
+        @Override protected MemberCache computeValue(Class<?> type) { return new MemberCache(); }
+    };
+    private static final class MemberCache {
+        final ConcurrentHashMap<String, Field> fields = new ConcurrentHashMap<>();
+        final ConcurrentHashMap<MethodKey, Method> methods = new ConcurrentHashMap<>();
+    }
+    private record MethodKey(String name, List<Class<?>> types, boolean exact) { }
+    private static final int MAX_METHOD_CACHE = 256;
+
+    private static Method cacheMethod(MemberCache cache, MethodKey key, Method method) {
+        method.setAccessible(true);
+        // Reflection on arbitrary arguments must not grow an unbounded type catalogue.
+        if (cache.methods.size() < MAX_METHOD_CACHE) {
+            Method previous = cache.methods.putIfAbsent(key, method);
+            if (previous != null) return previous;
+        }
+        return method;
+    }
+
+    public static class ClassNotFoundError extends Error {
+        public ClassNotFoundError(String className, Throwable cause) {
+            super(className, cause);
+        }
+    }
+
+    public static Class<?> findClass(String className, ClassLoader classLoader) {
+        try {
+            return Class.forName(className, false, classLoader);
+        } catch (ClassNotFoundException e) {
+            throw new ClassNotFoundError(className, e);
+        }
+    }
+
+    public static Class<?> findClassIfExists(String className, ClassLoader classLoader) {
+        try {
+            return Class.forName(className, false, classLoader);
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
+    }
+
+    public static Method findMethodExact(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
+        MemberCache cache = MEMBERS.get(clazz);
+        MethodKey key = new MethodKey(methodName, List.copyOf(Arrays.asList(parameterTypes)), true);
+        Method cached = cache.methods.get(key);
+        if (cached != null) return cached;
+        try {
+            return cacheMethod(cache, key, clazz.getDeclaredMethod(methodName, parameterTypes));
+        } catch (NoSuchMethodException e) {
+            throw new NoSuchMethodError(clazz.getName() + "#" + methodName);
+        }
+    }
+
+    public static XC_MethodHook.Unhook findAndHookMethod(String className, ClassLoader classLoader,
+                                                          String methodName, Object... parameterTypesAndCallback) {
+        return findAndHookMethod(findClass(className, classLoader), methodName, parameterTypesAndCallback);
+    }
+
+    public static XC_MethodHook.Unhook findAndHookMethod(Class<?> clazz,
+                                                          String methodName, Object... parameterTypesAndCallback) {
+        ParsedHookArgs parsed = parseHookArgs(parameterTypesAndCallback);
+        Method method = findMethodExact(clazz, methodName, parsed.parameterTypes);
+        return XposedBridge.hookMethod(method, parsed.callback);
+    }
+
+    public static Object getObjectField(Object obj, String fieldName) {
+        try {
+            Field field = findField(obj.getClass(), fieldName);
+            return field.get(obj);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object callMethod(Object obj, String methodName, Object... args) {
+        Method method = findBestMethod(obj.getClass(), methodName, args);
+        try {
+            return method.invoke(obj, args);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object callStaticMethod(Class<?> clazz, String methodName, Object... args) {
+        Class<?>[] declaredParamTypes = null;
+        Object[] invokeArgs = args;
+        if (args.length > 0 && args[0] instanceof Class<?>[]) {
+            declaredParamTypes = (Class<?>[]) args[0];
+            invokeArgs = Arrays.copyOfRange(args, 1, args.length);
+        }
+
+        Method method;
+        if (declaredParamTypes != null) {
+            method = findMethodExact(clazz, methodName, declaredParamTypes);
+        } else {
+            method = findBestMethod(clazz, methodName, invokeArgs);
+        }
+
+        try {
+            return method.invoke(null, invokeArgs);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static ParsedHookArgs parseHookArgs(Object... parameterTypesAndCallback) {
+        if (parameterTypesAndCallback.length == 0 ||
+                !(parameterTypesAndCallback[parameterTypesAndCallback.length - 1] instanceof XC_MethodHook)) {
+            throw new IllegalArgumentException("Last argument must be XC_MethodHook callback");
+        }
+        XC_MethodHook callback = (XC_MethodHook) parameterTypesAndCallback[parameterTypesAndCallback.length - 1];
+        Class<?>[] parameterTypes = new Class<?>[parameterTypesAndCallback.length - 1];
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Object type = parameterTypesAndCallback[i];
+            if (!(type instanceof Class<?>)) {
+                throw new IllegalArgumentException("Parameter type must be Class at index " + i);
+            }
+            parameterTypes[i] = (Class<?>) type;
+        }
+        return new ParsedHookArgs(parameterTypes, callback);
+    }
+
+    private static Field findField(Class<?> clazz, String fieldName) {
+        MemberCache cache = MEMBERS.get(clazz);
+        Field cached = cache.fields.get(fieldName);
+        if (cached != null) return cached;
+        Class<?> current = clazz;
+        while (current != null) {
+            try {
+                Field field = current.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                Field previous = cache.fields.putIfAbsent(fieldName, field);
+                return previous == null ? field : previous;
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldError(clazz.getName() + "#" + fieldName);
+    }
+
+    private static Method findBestMethod(Class<?> clazz, String methodName, Object[] args) {
+        MemberCache cache = MEMBERS.get(clazz);
+        Class<?>[] types = new Class<?>[args.length];
+        for (int i = 0; i < args.length; i++) types[i] = args[i] == null ? null : args[i].getClass();
+        // Arrays.asList permits the null marker, unlike List.copyOf.
+        MethodKey key = new MethodKey(methodName, Arrays.asList(types), false);
+        Method cached = cache.methods.get(key);
+        if (cached != null) return cached;
+        Method best = null;
+        int bestScore = -1;
+        for (Method m : clazz.getDeclaredMethods()) {
+            if (!m.getName().equals(methodName)) {
+                continue;
+            }
+            Class<?>[] pts = m.getParameterTypes();
+            if (pts.length != args.length) {
+                continue;
+            }
+            int score = 0;
+            boolean ok = true;
+            for (int i = 0; i < pts.length; i++) {
+                Object arg = args[i];
+                if (arg == null) {
+                    continue;
+                }
+                Class<?> boxed = boxPrimitive(pts[i]);
+                if (!boxed.isAssignableFrom(arg.getClass())) {
+                    ok = false;
+                    break;
+                }
+                if (boxed == arg.getClass()) {
+                    score++;
+                }
+            }
+            if (ok && score >= bestScore) {
+                best = m;
+                bestScore = score;
+            }
+        }
+        if (best == null) {
+            throw new NoSuchMethodError(clazz.getName() + "#" + methodName);
+        }
+        return cacheMethod(cache, key, best);
+    }
+
+    private static Class<?> boxPrimitive(Class<?> cls) {
+        if (!cls.isPrimitive()) {
+            return cls;
+        }
+        if (cls == int.class) return Integer.class;
+        if (cls == long.class) return Long.class;
+        if (cls == boolean.class) return Boolean.class;
+        if (cls == float.class) return Float.class;
+        if (cls == double.class) return Double.class;
+        if (cls == byte.class) return Byte.class;
+        if (cls == short.class) return Short.class;
+        if (cls == char.class) return Character.class;
+        return cls;
+    }
+
+    private static final class ParsedHookArgs {
+        final Class<?>[] parameterTypes;
+        final XC_MethodHook callback;
+
+        ParsedHookArgs(Class<?>[] parameterTypes, XC_MethodHook callback) {
+            this.parameterTypes = parameterTypes;
+            this.callback = callback;
+        }
+    }
+}

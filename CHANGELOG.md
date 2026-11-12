@@ -1,0 +1,12 @@
+# Changelog
+
+## 1.0.0
+
+First release as HyperFCM, a HyperOS-only module.
+
+- New interface built with [Miuix](https://github.com/compose-miuix-ui/miuix), new icon, English / Turkish / Chinese.
+- Boot guard: after three boots in a row that do not finish, the module stops installing its hooks until you turn them back on in the app.
+- Hook status shows, per hook group, how often the system has called it since boot, and warns when a group on an always-busy path is never called.
+- PowerKeeper hooks (sleep-mode mobile data, GMS DNS block) now report their status too.
+- Second layer against the Greeze GMS limit (`triggerGMSLimitAction`).
+- All ColorOS / OPlus code and options removed.
