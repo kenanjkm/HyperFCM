@@ -8,8 +8,6 @@ An LSPosed module that makes Firebase Cloud Messaging (FCM) push notifications a
 Tested on HyperOS 4 (Android 17, Xiaomi 17 Pro Max, China ROM used outside China). Other HyperOS
 versions may work; the app shows which hooks could be installed on your system.
 
-[Türkçe açıklama aşağıda](#türkçe)
-
 ## What it does
 
 HyperOS China ROMs break FCM in two places: they freeze Google Play services, which holds the push
@@ -84,32 +82,10 @@ Needs JDK 21 and Android SDK platform 37.
 
 ## Credits
 
-HyperFCM started from [zopulus/fcmfix-coloros17](https://github.com/zopulus/fcmfix-coloros17), which
-goes back through [ByteJuno/fcmfix-coloros](https://github.com/ByteJuno/fcmfix-coloros) and
-[Artifical0/fcmfix-coloros](https://github.com/Artifical0/fcmfix-coloros) to
-[kooritea/fcmfix](https://github.com/kooritea/fcmfix). The HyperOS hooks, the interface and the
-safety features are new; the trusted-delivery core comes from those projects.
+HyperFCM builds on the trusted-delivery core of [fcmfix](https://github.com/kooritea/fcmfix) by
+kooritea and its community forks (see [LICENSE](LICENSE)). The HyperOS hooks, the interface and the
+safety features were written for HyperFCM.
 
 The interface uses [Miuix](https://github.com/compose-miuix-ui/miuix).
 
 Licensed under the [MIT License](LICENSE).
-
----
-
-## Türkçe
-
-HyperFCM, **Xiaomi HyperOS Çin ROM'larında** FCM bildirimlerinin güvenilir şekilde gelmesini sağlayan
-bir LSPosed modülüdür. Sistem bir uygulamayı durdurmuş veya dondurmuş olsa bile bildirim gelir.
-
-- Durdurulmuş ve dondurulmuş uygulamalara bildirim teslimi (yalnızca izin verdiğiniz uygulamalar)
-- Google Play Hizmetleri'nin ekran kapalıyken dondurulmasını ve ağının kısıtlanmasını engelleme
-- İsteğe bağlı: global ROM dondurucu politikası, uyku modunda mobil veriyi açık tutma, kritik
-  uygulama koruması, uygulama durdurulunca bildirimleri koruma
-- Kanca durumu ekranı ve önyükleme koruması
-
-**Pil:** Modül telefonu asla uyanık tutmaz. Wakelock almaz, alarm kurmaz, kendi ağ trafiğini
-üretmez. Pil tüketimini artıran seçenekler uygulamada belirtilir.
-
-**Kurulum:** APK'yı kurun, LSPosed'de etkinleştirin (kapsam: Sistem Çerçevesi ile Pil ve
-performans), yeniden başlatın, ardından Uygulamalar sayfasından bildirim almasını istediğiniz
-uygulamalara izin verin. Başka bir FCM düzeltme modülüyle birlikte kullanmayın.

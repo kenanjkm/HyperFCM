@@ -5,5 +5,4 @@ HyperFCM bundles the following third-party work:
 - Material Symbols by Google (notification icon), Apache License 2.0 - see material-symbols.txt
 - AndroidX / Jetpack Compose, Apache License 2.0
 
-HyperFCM itself derives from kooritea/fcmfix (MIT License) through
-Artifical0/fcmfix-coloros, ByteJuno/fcmfix-coloros and zopulus/fcmfix-coloros17.
+HyperFCM is based on kooritea/fcmfix (MIT License) and its community forks
