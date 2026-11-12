@@ -12,6 +12,11 @@ public final class RomInfo {
         return name.isEmpty() ? property("ro.mi.os.version.name") : name;
     }
 
+    /** The only supported system: HyperOS 4 on Android 17. */
+    public static boolean isSupported() {
+        return isHyperOs() && hyperOsVersion().startsWith("OS4") && Build.VERSION.SDK_INT >= 37;
+    }
+
     public static boolean isHyperOs() {
         return !property("ro.mi.os.version.name").isEmpty() || "Xiaomi".equalsIgnoreCase(Build.MANUFACTURER);
     }

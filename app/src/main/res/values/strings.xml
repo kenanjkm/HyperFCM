@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">HyperFCM</string>
-    <string name="module_description">Reliable FCM push notifications on HyperOS China ROMs</string>
+    <string name="module_description">Reliable FCM push notifications on HyperOS 4 China ROMs</string>
     <string name="app_subtitle">FCM push for HyperOS</string>
     <string name="tab_home">Home</string>
     <string name="tab_apps">Apps</string>
@@ -22,8 +22,8 @@
     <string name="safe_mode_summary">The phone failed to finish booting several times in a row, so HyperFCM stopped installing its hooks. Notifications to stopped apps do not work until you turn the hooks back on.</string>
     <string name="safe_mode_leave">Turn hooks back on</string>
     <string name="safe_mode_released">Hooks will be installed again after the next reboot.</string>
-    <string name="not_hyperos_title">This does not look like HyperOS</string>
-    <string name="not_hyperos_summary">HyperFCM only supports Xiaomi HyperOS. On other ROMs most hooks cannot be installed.</string>
+    <string name="not_hyperos_title">This system is not supported</string>
+    <string name="not_hyperos_summary">HyperFCM only supports Xiaomi HyperOS 4 (Android 17). On other versions hooks can fail or behave differently.</string>
     <string name="hook_status_title">Hook status</string>
     <string name="hook_status_waiting">No report yet</string>
     <string name="hook_status_good">All hooks are working</string>

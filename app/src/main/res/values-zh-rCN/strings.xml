@@ -21,8 +21,8 @@
     <string name="safe_mode_summary">手机连续多次未能完成启动，HyperFCM 已停止安装 Hook。重新启用之前，已停止的应用收不到推送。</string>
     <string name="safe_mode_leave">重新启用 Hook</string>
     <string name="safe_mode_released">下次重启后将重新安装 Hook。</string>
-    <string name="not_hyperos_title">当前系统似乎不是 HyperOS</string>
-    <string name="not_hyperos_summary">HyperFCM 仅支持小米 HyperOS，其他系统上大部分 Hook 无法安装。</string>
+    <string name="not_hyperos_title">不支持当前系统</string>
+    <string name="not_hyperos_summary">HyperFCM 仅支持小米 HyperOS 4（Android 17）。在其他版本上 Hook 可能安装失败或行为异常。</string>
     <string name="hook_status_title">Hook 状态</string>
     <string name="hook_status_waiting">暂无报告</string>
     <string name="hook_status_good">全部 Hook 正常</string>

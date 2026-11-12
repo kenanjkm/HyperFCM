@@ -3,10 +3,11 @@
 # HyperFCM
 
 An LSPosed module that makes Firebase Cloud Messaging (FCM) push notifications arrive reliably on
-**Xiaomi HyperOS China ROMs**, including for apps that the system has stopped or frozen.
+**Xiaomi HyperOS 4 China ROMs**, including for apps that the system has stopped or frozen.
 
-Tested on HyperOS 4 (Android 17, Xiaomi 17 Pro Max, China ROM used outside China). Other HyperOS
-versions may work; the app shows which hooks could be installed on your system.
+**Only HyperOS 4 (Android 17) is supported.** The hooks were written against the HyperOS 4 system
+code; older HyperOS versions (1, 2, 3) are not supported. Tested on a Xiaomi 17 Pro Max with the
+China ROM. The app shows which hooks could be installed on your system.
 
 ## What it does
 
@@ -45,7 +46,7 @@ policy let more apps run in the background.
 
 ## Requirements
 
-- Xiaomi HyperOS (China ROM), Android 14 or newer
+- Xiaomi HyperOS 4 (China ROM, Android 17)
 - Root with LSPosed (libxposed API 102 or newer)
 - Google Play services installed and working
 

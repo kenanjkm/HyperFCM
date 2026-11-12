@@ -242,7 +242,7 @@ private fun HomePage(
 ) {
     val config = state.config
     val allowedCount = apps.count { it.packageName in config.allowedPackages }
-    val hyperOs = remember { RomInfo.isHyperOs() }
+    val supported = remember { RomInfo.isSupported() }
     val report = state.hookReport
 
     Page(
@@ -272,7 +272,7 @@ private fun HomePage(
                 )
             }
         }
-        if (!hyperOs) item(key = "rom") {
+        if (!supported) item(key = "rom") {
             Card(modifier = CardModifier) {
                 BasicComponent(
                     title = stringResource(R.string.not_hyperos_title),

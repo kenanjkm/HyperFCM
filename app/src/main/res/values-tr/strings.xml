@@ -21,8 +21,8 @@
     <string name="safe_mode_summary">Telefon art arda birkaç kez açılışı tamamlayamadı, bu yüzden HyperFCM kancalarını kurmayı bıraktı. Kancaları yeniden açana kadar durdurulmuş uygulamalara bildirim gelmez.</string>
     <string name="safe_mode_leave">Kancaları yeniden aç</string>
     <string name="safe_mode_released">Kancalar bir sonraki yeniden başlatmada tekrar kurulacak.</string>
-    <string name="not_hyperos_title">Bu cihaz HyperOS görünmüyor</string>
-    <string name="not_hyperos_summary">HyperFCM yalnızca Xiaomi HyperOS\'u destekler. Diğer ROM\'larda kancaların çoğu kurulamaz.</string>
+    <string name="not_hyperos_title">Bu sistem desteklenmiyor</string>
+    <string name="not_hyperos_summary">HyperFCM yalnızca Xiaomi HyperOS 4\'ü (Android 17) destekler. Diğer sürümlerde kancalar kurulamayabilir ya da farklı çalışabilir.</string>
     <string name="hook_status_title">Kanca durumu</string>
     <string name="hook_status_waiting">Henüz rapor yok</string>
     <string name="hook_status_good">Tüm kancalar çalışıyor</string>
