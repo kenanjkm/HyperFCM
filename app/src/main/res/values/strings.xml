@@ -79,7 +79,7 @@
     <string name="icebox_summary">When a push arrives, tries to enable an app that Ice Box disabled. Needs the Ice Box app; unrelated to the HyperOS freezer</string>
     <string name="greeze_group">Freezer and memory</string>
     <string name="greeze_global_title">Use the global ROM freezer policy</string>
-    <string name="greeze_global_summary">Runs the HyperOS freezer (Greeze) with the international policy that is built into the system instead of the China one. Reboot after changing. Experimental: background apps are restricted less, battery use can go up</string>
+    <string name="greeze_global_summary">Runs the HyperOS freezer (Greeze) with the international policy built into the system, as on a global ROM: when an app with push is frozen its connections are closed, so its server sends new messages by FCM instead of to a frozen app. Recommended for Telegram-type apps. Reboot after changing</string>
     <string name="protected_title">Critical app protection</string>
     <string name="protected_summary_none">No apps selected. Selected apps are never frozen or killed in the background; battery use goes up</string>
     <string name="protected_summary_some">%1$d apps protected (uses more battery)</string>

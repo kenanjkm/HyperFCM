@@ -78,7 +78,7 @@
     <string name="icebox_summary">推送到达时尝试启用被冰箱禁用的应用。需要安装冰箱；与 HyperOS 冻结机制无关</string>
     <string name="greeze_group">冻结与内存</string>
     <string name="greeze_global_title">使用国际版冻结策略</string>
-    <string name="greeze_global_summary">让 HyperOS 冻结机制（Greeze）使用系统内置的国际版策略而非国行策略。更改后需重启。实验性：后台应用限制更少，耗电可能增加</string>
+    <string name="greeze_global_summary">让 HyperOS 冻结器（Greeze）按系统内置的国际版策略运行，与国际版 ROM 相同：使用推送的应用被冻结时会关闭其网络连接，服务器因此通过 FCM 发送新消息，而不是发往已冻结的应用。推荐用于 Telegram 类应用。更改后请重启</string>
     <string name="protected_title">关键应用保护</string>
     <string name="protected_summary_none">未选择应用。所选应用在后台不会被冻结或清理，耗电会增加</string>
     <string name="protected_summary_some">已保护 %1$d 个应用（耗电增加）</string>
