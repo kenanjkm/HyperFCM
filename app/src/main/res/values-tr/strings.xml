@@ -78,7 +78,7 @@
     <string name="icebox_summary">Bildirim geldiğinde Ice Box\'ın devre dışı bıraktığı uygulamayı etkinleştirmeyi dener. Ice Box uygulaması gerekir; HyperOS dondurucusuyla ilgisi yoktur</string>
     <string name="greeze_group">Dondurucu ve bellek</string>
     <string name="greeze_global_title">Global ROM dondurucu politikasını kullan</string>
-    <string name="greeze_global_summary">HyperOS dondurucusunu (Greeze) Çin politikası yerine sistemin içindeki uluslararası politikayla çalıştırır. Değiştirdikten sonra yeniden başlatın. Deneysel: arka plan uygulamaları daha az kısıtlanır, pil tüketimi artabilir</string>
+    <string name="greeze_global_summary">HyperOS dondurucusunu (Greeze) sistemin içindeki uluslararası politikayla, global ROM\'daki gibi çalıştırır: push kullanan bir uygulama dondurulunca bağlantıları kapatılır, böylece sunucusu yeni mesajları donmuş uygulamaya değil FCM ile gönderir. Telegram türü uygulamalar için önerilir. Değiştirdikten sonra yeniden başlatın</string>
     <string name="protected_title">Kritik uygulama koruması</string>
     <string name="protected_summary_none">Seçili uygulama yok. Seçilen uygulamalar arka planda dondurulmaz ve kapatılmaz; pil tüketimi artar</string>
     <string name="protected_summary_some">%1$d uygulama korunuyor (pil tüketimi artar)</string>

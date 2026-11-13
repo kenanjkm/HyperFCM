@@ -338,6 +338,49 @@ public class HyperOsFix extends XposedModule {
     // ---------------------------------------------------------------------------------------------
 
     private static final String POLICY_CONFIG = "com.miui.server.greeze.PolicyManagerConfig";
+    private static final String INTERNATIONAL_POLICY = "com.miui.server.greeze.InternationalPolicyManager";
+
+    // The global policy's network control ("new strategy") is a separate ROM feature flag:
+    //   InternationalPolicyManager.<clinit>: mNewController =
+    //       HyperOSCustFeatureResolve.getBoolean("config_greezer_global_net_enable", false)
+    //       && persist.sys.greeze.oversea (default true)
+    // A global ROM ships it on; the CN ROM ships it off, so forcing the policy alone leaves it out.
+    // With it, a frozen FCM app has its TCP sockets destroyed (InetDiagMessage) and its network
+    // blocked, so its server sees it offline and sends the message by FCM instead of into a socket
+    // the frozen app cannot read. Greeze then also lets c2dm RECEIVE through to frozen apps.
+    // Nothing is re-implemented; the ROM's own global code runs.
+    private static final String CUST_FEATURE = "miui.os.HyperOSCustFeatureResolve";
+    private static final String GLOBAL_NET_FEATURE = "config_greezer_global_net_enable";
+
+    /** Answers the global net-control feature flag as a global ROM does, only while the option is on. */
+    private void hookGlobalNetFeature() {
+        Class<?> resolver = XposedHelpers.findClassIfExists(CUST_FEATURE, classLoader);
+        if (resolver == null) {
+            logOnce("Greeze global policy: " + CUST_FEATURE + " not found, network control stays off");
+            return;
+        }
+        XposedBridge.hookMethod(XposedHelpers.findMethodExact(resolver, "getBoolean", String.class, boolean.class),
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        if (forceGlobalPolicy && GLOBAL_NET_FEATURE.equals(param.args[0])) param.setResult(true);
+                    }
+                });
+    }
+
+    /** Late switch: the policy class may already have read the flag, so set its cached copy too. */
+    private static void enableGlobalNetControlLate(ClassLoader loader) {
+        try {
+            java.lang.reflect.Field field = XposedHelpers.findClass(INTERNATIONAL_POLICY, loader)
+                    .getDeclaredField("mNewController");
+            field.setAccessible(true);
+            field.setBoolean(null, true);
+            printLog("Greeze global policy: network control enabled");
+        } catch (Throwable error) {
+            printLog("Greeze global policy: network control unavailable: " + error);
+        }
+    }
+
     private static volatile boolean forceGlobalPolicy;
     private static volatile Method setCnModelMethod;
 
@@ -351,6 +394,12 @@ public class HyperOsFix extends XposedModule {
                 if (forceGlobalPolicy) param.args[0] = false;
             }
         });
+        try {
+            hookGlobalNetFeature();
+        } catch (Throwable error) {
+            // The region switch still works without it; only the socket/network part stays CN-like.
+            printLog("Greeze global policy: network control hook failed: " + error);
+        }
         // The switch is read before the user unlocks, so it comes from the framework-side preferences.
         boolean enabled = false;
         try {
@@ -381,6 +430,7 @@ public class HyperOsFix extends XposedModule {
         forceGlobalPolicy = true;
         try {
             setCnModel.invoke(null, false);
+            enableGlobalNetControlLate(greezeClass.getClassLoader());
             Object service = XposedHelpers.callStaticMethod(greezeClass, "getService");
             if (service == null) return;
             XposedHelpers.callMethod(service, "thawAll", "hyperfcm_global_policy");
