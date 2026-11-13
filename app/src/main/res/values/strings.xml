@@ -96,6 +96,7 @@
     <string name="toast_icon_failed">Could not change the launcher icon</string>
     <string name="toast_default_save_failed">Could not save the default settings. Reopen the app and try again</string>
     <string name="toast_save_failed">Could not save. Check that the module is active in LSPosed and try again</string>
+    <string name="toast_save_partial">Saved, but only partly: some features may use the old settings until the module is active in LSPosed. Reopen the app and save again</string>
     <string name="toast_diag_failed">Could not open the FCM diagnostics page</string>
     <string name="toast_no_browser">No browser available</string>
     <string name="app_list_limited">HyperOS hides most apps from HyperFCM. Allow it under Settings → Apps → HyperFCM → Permissions → Read installed apps, then open this list again.</string>

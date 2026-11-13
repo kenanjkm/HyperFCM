@@ -95,6 +95,7 @@
     <string name="toast_icon_failed">Başlatıcı simgesi değiştirilemedi</string>
     <string name="toast_default_save_failed">Varsayılan ayarlar kaydedilemedi. Uygulamayı yeniden açıp tekrar deneyin</string>
     <string name="toast_save_failed">Kaydedilemedi. Modülün LSPosed\'de etkin olduğunu kontrol edip tekrar deneyin</string>
+    <string name="toast_save_partial">Kısmen kaydedildi: modül LSPosed\'de etkin olana kadar bazı özellikler eski ayarları kullanabilir. Uygulamayı yeniden açıp tekrar kaydedin</string>
     <string name="toast_diag_failed">FCM tanılama sayfası açılamadı</string>
     <string name="toast_no_browser">Kullanılabilir tarayıcı yok</string>
     <string name="app_list_limited">HyperOS uygulamaların çoğunu HyperFCM\'den gizliyor. Ayarlar → Uygulamalar → HyperFCM → İzinler → Yüklü uygulamaları oku iznini verin, sonra bu listeyi yeniden açın.</string>

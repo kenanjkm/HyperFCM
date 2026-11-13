@@ -22,6 +22,7 @@ public class XposedMain extends io.github.libxposed.api.XposedModule {
     /** A boot counts as finished once system_server has stayed alive this long. */
     private static final long BOOT_FINISHED_AFTER_MS = 120_000L;
     private boolean powerKeeperHooksInitialized;
+    private volatile Context systemContext;
 
     @Override
     public void onSystemServerStarting(SystemServerStartingParam param) {
@@ -74,7 +75,8 @@ public class XposedMain extends io.github.libxposed.api.XposedModule {
             long token = 0;
             try {
                 android.content.SharedPreferences prefs = XposedBridge.getRemotePreferences("guard");
-                if (prefs != null) token = prefs.getLong("reset", 0);
+                // Missing preferences must not release safe mode either.
+                token = prefs != null ? prefs.getLong("reset", 0) : state.token;
             } catch (Throwable error) {
                 // Keep the stored token: an unreadable preference must not release safe mode by accident.
                 token = state.token;
@@ -84,8 +86,20 @@ public class XposedMain extends io.github.libxposed.api.XposedModule {
                 XposedBridge.log("boot guard: state file not writable, guard inactive");
                 return false;
             }
+            // Finished = Android reported boot_completed AND system_server stayed up for 2 minutes
+            // of real time (elapsedRealtime counts suspend, so a sleeping phone still gets there).
+            // Plain sleep only: the check runs when the CPU is awake anyway, never wakes it.
+            long startedAt = android.os.SystemClock.elapsedRealtime();
             Thread thread = new Thread(() -> {
-                try { Thread.sleep(BOOT_FINISHED_AFTER_MS); } catch (InterruptedException e) { return; }
+                boolean shutdownWatched = false;
+                while (!("1".equals(systemProperty("sys.boot_completed"))
+                        && android.os.SystemClock.elapsedRealtime() - startedAt >= BOOT_FINISHED_AFTER_MS)) {
+                    if (!shutdownWatched && "1".equals(systemProperty("sys.boot_completed"))) {
+                        shutdownWatched = watchCleanShutdown(file);
+                    }
+                    try { Thread.sleep(10_000L); } catch (InterruptedException e) { return; }
+                }
+                if (!shutdownWatched) watchCleanShutdown(file);
                 BootGuard.State current = BootGuard.read(file);
                 BootGuard.bootFinished(current);
                 BootGuard.write(file, current);
@@ -99,12 +113,47 @@ public class XposedMain extends io.github.libxposed.api.XposedModule {
         }
     }
 
+    /**
+     * A user reboot or power-off sends ACTION_SHUTDOWN; a boot loop does not. Counting a clean
+     * shutdown as a finished boot keeps quick manual reboots from tripping the guard.
+     */
+    private boolean watchCleanShutdown(File file) {
+        Context ctx = systemContext;
+        if (ctx == null) return false;
+        try {
+            ctx.registerReceiver(new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, android.content.Intent intent) {
+                    BootGuard.State current = BootGuard.read(file);
+                    if (current.unfinished == 0) return;
+                    BootGuard.bootFinished(current);
+                    BootGuard.write(file, current);
+                }
+            }, new android.content.IntentFilter(android.content.Intent.ACTION_SHUTDOWN),
+                    null, null, Context.RECEIVER_NOT_EXPORTED);
+            return true;
+        } catch (Throwable error) {
+            XposedBridge.log("boot guard: shutdown receiver unavailable: " + error);
+            return false;
+        }
+    }
+
+    private static String systemProperty(String key) {
+        try {
+            return (String) Class.forName("android.os.SystemProperties")
+                    .getMethod("get", String.class).invoke(null, key);
+        } catch (Throwable error) {
+            return "1"; // unreadable: fall back to the timer alone
+        }
+    }
+
     private void attachSystemContext(ClassLoader classLoader) {
         try {
             Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", classLoader);
             Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
             Object systemContext = XposedHelpers.callMethod(activityThread, "getSystemContext");
             if (systemContext instanceof Context) {
+                this.systemContext = (Context) systemContext;
                 XposedModule.attachContext((Context) systemContext);
             } else {
                 XposedBridge.log("system context unavailable: getSystemContext returned null");

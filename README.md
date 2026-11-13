@@ -59,7 +59,7 @@ policy let more apps run in the background.
 4. Open HyperFCM. The home page should say "Module is active" and "All hooks are working".
 5. On the Apps page, allow the apps that should be woken by push.
 
-Do not run it together with another FCM fix (fcmfix forks, HyperFCMFix, XNotifyFix and similar):
+Do not run it together with another FCM fix (other fcmfix builds, HyperFCMFix, XNotifyFix and similar):
 they hook the same system methods.
 
 ## Reporting a problem
@@ -84,7 +84,7 @@ Needs JDK 21 and Android SDK platform 37.
 ## Credits
 
 HyperFCM builds on the trusted-delivery core of [fcmfix](https://github.com/kooritea/fcmfix) by
-kooritea and its community forks (see [LICENSE](LICENSE)). The HyperOS hooks, the interface and the
+kooritea and its community contributors (see [LICENSE](LICENSE)). The HyperOS hooks, the interface and the
 safety features were written for HyperFCM.
 
 The interface uses [Miuix](https://github.com/compose-miuix-ui/miuix).

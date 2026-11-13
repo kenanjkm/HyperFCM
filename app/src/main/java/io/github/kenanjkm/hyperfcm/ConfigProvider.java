@@ -58,7 +58,16 @@ public class ConfigProvider extends ContentProvider {
                 String name = io.github.kenanjkm.hyperfcm.util.HookStatus.fileFor(snapshot.source);
                 if (name == null) return result;
                 java.io.File file = new java.io.File(getContext().getFilesDir(), name);
-                java.nio.file.Files.write(file.toPath(), json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                // Atomic replace: a reader never sees a half-written report.
+                android.util.AtomicFile atomic = new android.util.AtomicFile(file);
+                java.io.FileOutputStream out = atomic.startWrite();
+                try {
+                    out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    atomic.finishWrite(out);
+                } catch (java.io.IOException error) {
+                    atomic.failWrite(out);
+                    throw error;
+                }
                 getContext().getContentResolver().notifyChange(Uri.parse("content://" + getContext().getPackageName() + ".provider/hookStatus"), null);
                 result.putBoolean("ok", true);
                 HookAlert.update(getContext(), snapshot);

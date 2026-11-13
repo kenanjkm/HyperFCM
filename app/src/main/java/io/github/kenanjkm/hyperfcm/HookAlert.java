@@ -27,10 +27,17 @@ final class HookAlert {
             // One notification per reporting process, so a healthy report never hides another's failure.
             final int ID = HookStatus.SOURCE_SYSTEM.equals(snapshot.source) ? 1 : 2;
             List<String> failed = snapshot.failed();
+            android.content.SharedPreferences seen = context.getSharedPreferences("hook_alert", Context.MODE_PRIVATE);
+            String key = "last_" + ID;
             if (failed.isEmpty()) {
                 manager.cancel(ID);
+                seen.edit().remove(key).apply();
                 return;
             }
+            // Status is re-published whenever the app opens or refreshes; alert only for a new failure set.
+            String fingerprint = snapshot.safeMode + "|" + String.join(",", failed);
+            if (fingerprint.equals(seen.getString(key, null))) return;
+            seen.edit().putString(key, fingerprint).apply();
             manager.createNotificationChannel(new NotificationChannel(CHANNEL,
                     context.getString(R.string.hook_status_title), NotificationManager.IMPORTANCE_DEFAULT));
             Intent open = new Intent(context, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -47,6 +54,7 @@ final class HookAlert {
                             : context.getString(R.string.hook_alert_text, text)))
                     .setContentIntent(intent)
                     .setAutoCancel(true)
+                    .setOnlyAlertOnce(true)
                     .build());
         } catch (Throwable error) {
             android.util.Log.w("HyperFCM", "Hook alert unavailable", error);

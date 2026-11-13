@@ -22,6 +22,11 @@ final class DeliveryWindow {
         return uid;
     }
 
+    /** True while the package has an open window; avoids a package-manager lookup on hot paths. */
+    static boolean isOpen(String packageName) {
+        return WINDOWS.containsPackage(packageName, SystemClock.elapsedRealtime());
+    }
+
     /** Package that owns the active window of this UID, or null. */
     static String packageFor(int uid) {
         return WINDOWS.packageName(uid, SystemClock.elapsedRealtime());
