@@ -54,6 +54,8 @@ private const val ACTION_UPDATE_CONFIG = "io.github.kenanjkm.hyperfcm.update.con
 private const val ACTION_STATUS_REQUEST = "io.github.kenanjkm.hyperfcm.status.request"
 private const val CONFIG_PERMISSION = "io.github.kenanjkm.hyperfcm.permission.CONFIG"
 private const val APP_LIST_PERMISSION = "com.android.permission.GET_INSTALLED_APPS"
+private const val REQUEST_NOTIFICATIONS = 2
+private const val REQUEST_APP_LIST = 3
 private const val PROJECT_URL = "https://github.com/kenanjkm/HyperFCM"
 
 data class ModuleConfig(
@@ -161,6 +163,8 @@ class MainActivity : ComponentActivity() {
         get() = ConfigMemory.editGeneration
         set(value) { ConfigMemory.editGeneration = value }
     private val uiState = ConfigMemory.state
+    /** The half-save warning is shown once per app session, not on every toggle. */
+    private var partialSaveWarned = false
     private var installedApps = androidx.compose.runtime.mutableStateOf<List<InstalledApp>>(emptyList())
     private var appsLoadingJob: Job? = null
     private var launcherIconHidden = androidx.compose.runtime.mutableStateOf(false)
@@ -195,9 +199,8 @@ class MainActivity : ComponentActivity() {
         contentResolver.registerContentObserver(Uri.parse("content://$packageName.provider/config"), false, configObserver)
         contentResolver.registerContentObserver(Uri.parse("content://$packageName.provider/hookStatus"), false, hookStatusObserver)
         loadHookReport()
-        if (uiState.value.config.includeIceBoxDisabledApps) requestIceBoxPermissionIfNeeded()
-        requestAppListPermissionIfNeeded()
-        requestNotificationPermissionIfNeeded()
+        // One dialog at a time: a second requestPermissions while one is showing is dropped.
+        requestNextPermission(0)
         ConfigMemory.bindXposedService()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -309,37 +312,61 @@ class MainActivity : ComponentActivity() {
      * HyperOS hides other apps from the installed-app list until the user grants its own
      * "read installed apps" permission. Without it both app lists come back incomplete.
      */
-    private fun requestAppListPermissionIfNeeded() {
-        try {
-            val info = runCatching { packageManager.getPermissionInfo(APP_LIST_PERMISSION, 0) }.getOrNull() ?: return
-            if (info.protection != android.content.pm.PermissionInfo.PROTECTION_DANGEROUS) return
-            if (checkSelfPermission(APP_LIST_PERMISSION) == PackageManager.PERMISSION_GRANTED) return
-            requestPermissions(arrayOf(APP_LIST_PERMISSION), 3)
-        } catch (error: Throwable) {
-            Log.w(TAG, "App list permission request unavailable", error)
-        }
+    /** Asks the first still-needed permission after [step]; its result asks the next one. */
+    private fun requestNextPermission(step: Int) {
+        if (step <= 0 && requestAppListPermissionIfNeeded()) return
+        if (step <= 1 && requestNotificationPermissionIfNeeded()) return
+        if (step <= 2 && uiState.value.config.includeIceBoxDisabledApps) requestIceBoxPermissionIfNeeded()
     }
 
+    private fun requestAppListPermissionIfNeeded(): Boolean = try {
+        val info = runCatching { packageManager.getPermissionInfo(APP_LIST_PERMISSION, 0) }.getOrNull()
+        if (info == null || info.protection != android.content.pm.PermissionInfo.PROTECTION_DANGEROUS
+            || checkSelfPermission(APP_LIST_PERMISSION) == PackageManager.PERMISSION_GRANTED) {
+            false
+        } else {
+            requestPermissions(arrayOf(APP_LIST_PERMISSION), REQUEST_APP_LIST)
+            true
+        }
+    } catch (error: Throwable) {
+        Log.w(TAG, "App list permission request unavailable", error)
+        false
+    }
+
+    @Deprecated("Activity result API is not used for these one-off system dialogs")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 3) {
-            appListGeneration.value++
-            loadInstalledApps(force = true)
+        when (requestCode) {
+            REQUEST_APP_LIST -> {
+                appListGeneration.value++
+                loadInstalledApps(force = true)
+                requestNextPermission(1)
+            }
+            REQUEST_NOTIFICATIONS -> {
+                // Marked only once the dialog was really answered, so a dropped request is retried.
+                if (grantResults.isNotEmpty()) {
+                    getSharedPreferences("ui", MODE_PRIVATE).edit()
+                        .putBoolean("notificationPermissionAsked", true).apply()
+                }
+                requestNextPermission(2)
+            }
         }
     }
 
     /** Only for the one-off alert when a hook group fails after boot; asked once, never nagged. */
-    private fun requestNotificationPermissionIfNeeded() {
-        try {
-            val permission = android.Manifest.permission.POST_NOTIFICATIONS
-            val prefs = getSharedPreferences("ui", MODE_PRIVATE)
-            if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
-                || prefs.getBoolean("notificationPermissionAsked", false)) return
-            prefs.edit().putBoolean("notificationPermissionAsked", true).apply()
-            requestPermissions(arrayOf(permission), 2)
-        } catch (error: Throwable) {
-            Log.w(TAG, "Notification permission request unavailable", error)
+    private fun requestNotificationPermissionIfNeeded(): Boolean = try {
+        val permission = android.Manifest.permission.POST_NOTIFICATIONS
+        val prefs = getSharedPreferences("ui", MODE_PRIVATE)
+        if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+            || prefs.getBoolean("notificationPermissionAsked", false)) {
+            false
+        } else {
+            requestPermissions(arrayOf(permission), REQUEST_NOTIFICATIONS)
+            true
         }
+    } catch (error: Throwable) {
+        Log.w(TAG, "Notification permission request unavailable", error)
+        false
     }
 
     private fun requestIceBoxPermissionIfNeeded() {
@@ -485,6 +512,14 @@ class MainActivity : ComponentActivity() {
                     }, previous.toJson(), config.toJson(), revision, System.currentTimeMillis())
             }.onFailure { Log.e(TAG, "Could not prepare configuration save", it) }.getOrNull()
             result?.localFailure?.let { Log.w(TAG, "Local configuration save failed", it) }
+            // Some readers use only one store (PowerKeeper and early boot: remote; install and
+            // Icebox handling: local), so a half save is reported instead of passing silently.
+            if (result != null && result.localSaved != result.remoteSaved && !partialSaveWarned) {
+                partialSaveWarned = true
+                runOnUiThread {
+                    Toast.makeText(this, getString(R.string.toast_save_partial), Toast.LENGTH_LONG).show()
+                }
+            }
             if (result == null || !result.localSaved && !result.remoteSaved) {
                 runOnUiThread {
                     Toast.makeText(this, getString(R.string.toast_save_failed), Toast.LENGTH_SHORT).show()

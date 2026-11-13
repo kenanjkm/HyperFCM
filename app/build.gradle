@@ -3,37 +3,37 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
     namespace = "io.github.kenanjkm.hyperfcm"
-    compileSdk 37
+    compileSdk = 37
 
     defaultConfig {
-        applicationId "io.github.kenanjkm.hyperfcm"
+        applicationId = "io.github.kenanjkm.hyperfcm"
         // ClassValue (reflection cache) requires API 34.
-        minSdkVersion 34
-        targetSdkVersion 34
-        versionCode 2
-        versionName "1.0.1"
+        minSdk = 34
+        targetSdk = 34
+        versionCode = 3
+        versionName = "1.0.2"
 
         ndk {
-            abiFilters "arm64-v8a"
+            abiFilters += "arm64-v8a"
         }
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
-        compose true
-        buildConfig true
+        compose = true
+        buildConfig = true
     }
 }
 

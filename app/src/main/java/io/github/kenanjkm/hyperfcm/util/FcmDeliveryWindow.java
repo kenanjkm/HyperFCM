@@ -24,4 +24,13 @@ public final class FcmDeliveryWindow {
     }
 
     public boolean contains(int uid, long now) { return packageName(uid, now) != null; }
+
+    /** True while some UID has an open window for this package. Cheap: no package lookup. */
+    public boolean containsPackage(String packageName, long now) {
+        if (packageName == null || entries.isEmpty()) return false;
+        for (Entry entry : entries.values()) {
+            if (now < entry.deadline && packageName.equals(entry.packageName)) return true;
+        }
+        return false;
+    }
 }

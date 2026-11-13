@@ -12,7 +12,6 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="com.catchingnow.icebox.SDK" />
-    <uses-permission android:name="web1n.stopapp.permission.disable_api" />
 
     <application
         android:allowBackup="false"

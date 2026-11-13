@@ -63,4 +63,14 @@ public class FcmDeliveryWindowTest {
         assertTrue(window.contains(10001, 20499));
         assertFalse(window.contains(10001, 20500));
     }
+
+    @Test public void containsPackageOnlyWhileWindowIsOpen() {
+        FcmDeliveryWindow window = new FcmDeliveryWindow();
+        assertFalse(window.containsPackage("target", 0));
+        window.begin(10001, "target", 0);
+        assertTrue(window.containsPackage("target", 19_999));
+        assertFalse(window.containsPackage("other", 1));
+        assertFalse(window.containsPackage(null, 1));
+        assertFalse(window.containsPackage("target", 20_000));
+    }
 }

@@ -50,4 +50,30 @@ public class BootGuardTest {
             assertEquals(bad, 0, state.unfinished);
         }
     }
+
+    @Test public void stateSurvivesFileRoundTrip() throws Exception {
+        java.io.File file = java.io.File.createTempFile("bootguard", null);
+        try {
+            BootGuard.State state = new BootGuard.State(2, true, 42);
+            assertTrue(BootGuard.write(file, state));
+            BootGuard.State read = BootGuard.read(file);
+            assertEquals(2, read.unfinished);
+            assertTrue(read.tripped);
+            assertEquals(42, read.token);
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test public void missingOrCorruptFileStartsClean() throws Exception {
+        java.io.File file = java.io.File.createTempFile("bootguard", null);
+        try {
+            java.nio.file.Files.write(file.toPath(), "garbage".getBytes());
+            assertFalse(BootGuard.read(file).tripped);
+            file.delete();
+            assertEquals(0, BootGuard.read(file).unfinished);
+        } finally {
+            file.delete();
+        }
+    }
 }

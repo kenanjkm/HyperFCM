@@ -5,61 +5,83 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+# Read-only by default; only the release job may write.
 permissions:
-  contents: write
+  contents: read
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.sign.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
       - name: Install Android SDK
         run: sdkmanager "platforms;android-37.2" "build-tools;36.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Build and test
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease testDebugUnitTest
       - name: Sign APK
+        id: sign
         env:
           KEYSTORE_B64: ${{ secrets.SIGNINGKEYBASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
           KEY_ALIAS: ${{ secrets.ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEYPASSWORD }}
+          IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
         run: |
-          VERSION_NAME=$(grep -Eo 'versionName "[^"]+"' app/build.gradle | cut -d'"' -f2)
+          VERSION_NAME=$(grep -Eo 'versionName( =)? "[^"]+"' app/build.gradle | cut -d'"' -f2)
+          [ -n "$VERSION_NAME" ] || { echo "::error::versionName not found in app/build.gradle"; exit 1; }
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           APK="app/build/outputs/apk/release/HyperFCM-$VERSION_NAME.apk"
           if [ -z "$KEYSTORE_B64" ]; then
+            if [ "$IS_TAG" = "true" ]; then
+              echo "::error::Signing secrets are missing; a release must never ship an unsigned APK"
+              exit 1
+            fi
             echo "::warning::Signing secrets are missing; uploading the unsigned APK instead"
             cp app/build/outputs/apk/release/app-release-unsigned.apk "$APK"
             exit 0
           fi
+          KS="$RUNNER_TEMP/release.jks"
+          trap 'rm -f "$KS"' EXIT
           BT="$ANDROID_HOME/build-tools/36.0.0"
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "$KEYSTORE_B64" | base64 -d > "$KS"
           "$BT/zipalign" -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/aligned.apk"
-          "$BT/apksigner" sign --ks "$RUNNER_TEMP/release.jks" --ks-pass env:KEYSTORE_PASSWORD \
+          "$BT/apksigner" sign --ks "$KS" --ks-pass env:KEYSTORE_PASSWORD \
             --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD --out "$APK" "$RUNNER_TEMP/aligned.apk"
           "$BT/apksigner" verify --print-certs "$APK" | head -2
-          rm -f "$RUNNER_TEMP/release.jks"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: HyperFCM-${{ env.VERSION_NAME }}
           path: app/build/outputs/apk/release/HyperFCM-${{ env.VERSION_NAME }}.apk
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: r8-mapping
           path: app/build/outputs/mapping/release/mapping.txt
-      # A release is published only for a version tag (v1.0.0), never for ordinary pushes.
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+
+  # A release is published only for a version tag (v1.0.2), never for ordinary pushes.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
         with:
-          name: "HyperFCM ${{ env.VERSION_NAME }}"
-          files: app/build/outputs/apk/release/HyperFCM-${{ env.VERSION_NAME }}.apk
+          name: HyperFCM-${{ needs.build.outputs.version }}
+      - uses: softprops/action-gh-release@v3
+        with:
+          name: "HyperFCM ${{ needs.build.outputs.version }}"
+          files: HyperFCM-${{ needs.build.outputs.version }}.apk
+          fail_on_unmatched_files: true

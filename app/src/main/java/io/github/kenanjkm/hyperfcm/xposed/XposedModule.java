@@ -42,14 +42,25 @@ public abstract class XposedModule {
     protected final ClassLoader classLoader;
     static final String TAG = "HyperFCM";
     private static volatile ConfigSnapshot config;
-    private static boolean reloadRequested;
+    /**
+     * Reload bookkeeping is lock-free: hooks call into it while system_server holds its own locks
+     * (ActivityManagerService etc.), so taking a module lock there could deadlock with the init
+     * path, which calls registerReceiver while holding {@link #INIT_LOCK}.
+     */
+    private static final java.util.concurrent.atomic.AtomicBoolean reloadRequested = new java.util.concurrent.atomic.AtomicBoolean();
+    private static final java.util.concurrent.atomic.AtomicBoolean reloadRunning = new java.util.concurrent.atomic.AtomicBoolean();
+    /** Guards one-time initialization only; never taken on a hook path. */
+    private static final Object INIT_LOCK = new Object();
+    /** Back-off for reloads that hooks trigger while no configuration exists yet. */
+    private static volatile long nextAutoReloadAt;
+    private static volatile long autoReloadDelay = 60_000L;
+    private static final long AUTO_RELOAD_MAX_DELAY = 3_600_000L;
 
     @SuppressLint("StaticFieldLeak")
     protected static volatile Context context = null;
     private static final java.util.concurrent.CopyOnWriteArrayList<XposedModule> instances = new java.util.concurrent.CopyOnWriteArrayList<>();
-    private static boolean receiversRegistered;
+    private static volatile boolean receiversRegistered;
     public static volatile boolean isBootComplete = false;
-    private static Thread loadConfigThread = null;
     private static volatile boolean bootInitThreadStarted = false;
     private static volatile boolean bootInitInvoked = false;
     private static volatile long lastStatusPublish;
@@ -82,9 +93,13 @@ public abstract class XposedModule {
         startBootInitThread();
     }
 
+    /** Bounded retries (plain sleep) while system services are still starting. */
+    private static final int BOOT_INIT_ATTEMPTS = 24;
+
     /**
-     * Waits for the user to unlock, then loads the configuration. Early in boot the services the
-     * check needs may not be registered yet, so it retries; ACTION_USER_UNLOCKED is the fallback.
+     * Waits for the user to unlock, then loads the configuration. Before unlock it does not poll:
+     * it registers for ACTION_USER_UNLOCKED and exits. Retries are bounded and only cover the
+     * short window in which early-boot services are not registered yet.
      */
     private static void startBootInitThread() {
         if (bootInitThreadStarted) {
@@ -93,20 +108,8 @@ public abstract class XposedModule {
         bootInitThreadStarted = true;
         Thread thread = new Thread(() -> {
             boolean receiverRegistered = false;
-            while (true) {
-                if (bootInitInvoked) {
-                    return;
-                }
-                try {
-                    UserManager userManager = context.getSystemService(UserManager.class);
-                    if (userManager != null && userManager.isUserUnlocked()) {
-                        callAllOnCanReadConfig();
-                        // Registration may fail while services are starting. Keep polling
-                        // until initialization actually succeeds, even after unlock.
-                        if (bootInitInvoked) return;
-                    }
-                } catch (Throwable ignored) {
-                }
+            for (int attempt = 0; attempt < BOOT_INIT_ATTEMPTS; attempt++) {
+                if (bootInitInvoked) return;
                 if (!receiverRegistered) {
                     try {
                         IntentFilter userUnlockIntentFilter = new IntentFilter();
@@ -116,23 +119,50 @@ public abstract class XposedModule {
                     } catch (Throwable ignored) {
                     }
                 }
+                // Checked after registering so an unlock in between is not missed.
+                if (isUserUnlocked()) {
+                    callAllOnCanReadConfig();
+                    if (bootInitInvoked) return;
+                } else if (receiverRegistered) {
+                    return; // the unlock broadcast takes over
+                }
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {
                     return;
                 }
             }
+            printLog("boot init gave up; the next config broadcast or unlock retries");
         }, "hyperfcm-boot-init");
         thread.setDaemon(true);
         thread.start();
     }
 
-    private static synchronized void callAllOnCanReadConfig() {
-        if (bootInitInvoked) {
-            return;
+    private static boolean isUserUnlocked() {
+        try {
+            UserManager userManager = context.getSystemService(UserManager.class);
+            return userManager != null && userManager.isUserUnlocked();
+        } catch (Throwable error) {
+            return false;
         }
-        if (!initReceivers()) return;
-        bootInitInvoked = true;
+    }
+
+    /** Called on unlock: initialize now, or retry briefly in the background if services lag. */
+    private static void initAfterUnlock() {
+        callAllOnCanReadConfig();
+        if (bootInitInvoked) return;
+        bootInitThreadStarted = false;
+        startBootInitThread();
+    }
+
+    private static void callAllOnCanReadConfig() {
+        synchronized (INIT_LOCK) {
+            if (bootInitInvoked) {
+                return;
+            }
+            if (!initReceivers()) return;
+            bootInitInvoked = true;
+        }
         // Load once right at unlock so the first push is not dropped for a missing configuration.
         onUpdateConfig();
         publishHookStatus(12);
@@ -190,18 +220,22 @@ public abstract class XposedModule {
                 SystemClock.elapsedRealtime());
     }
 
+    /**
+     * Hooks call this when no configuration is loaded yet (e.g. the app was never opened). Each
+     * attempt queries the module's provider, which can start the app process, so attempts back
+     * off from 1 minute up to 1 hour. They only happen when a hook runs anyway; nothing is
+     * scheduled. A config broadcast from the app still reloads immediately.
+     */
     protected void checkUserDeviceUnlockAndUpdateConfig() {
-        if (context == null) {
+        if (context == null || config != null) {
             return;
         }
-        try {
-            UserManager userManager = context.getSystemService(UserManager.class);
-            if (userManager != null && userManager.isUserUnlocked()) {
-                onUpdateConfig();
-            }
-        } catch (Throwable e) {
-            printLog("Config update failed: " + e.getMessage());
-        }
+        long now = SystemClock.elapsedRealtime();
+        if (now < nextAutoReloadAt) return;
+        long delay = autoReloadDelay;
+        nextAutoReloadAt = now + delay;
+        autoReloadDelay = Math.min(delay * 2, AUTO_RELOAD_MAX_DELAY);
+        if (isUserUnlocked()) onUpdateConfig();
     }
 
     private static final BroadcastReceiver unlockBroadcastReceive = new BroadcastReceiver() {
@@ -212,7 +246,7 @@ public abstract class XposedModule {
                     context.unregisterReceiver(unlockBroadcastReceive);
                 } catch (Throwable ignored) {
                 }
-                callAllOnCanReadConfig();
+                initAfterUnlock();
             }
         }
     };
@@ -244,29 +278,29 @@ public abstract class XposedModule {
         return snapshot.options.getOrDefault(key, defaultValue);
     }
 
-    protected static synchronized void onUpdateConfig() {
-        reloadRequested = true;
-        if (loadConfigThread != null) return;
-        loadConfigThread = new Thread(() -> {
+    /** Requests a reload. Lock-free and safe to call from any hook; at most one loader thread runs. */
+    protected static void onUpdateConfig() {
+        reloadRequested.set(true);
+        if (!reloadRunning.compareAndSet(false, true)) return;
+        Thread loader = new Thread(() -> {
             while (true) {
-                synchronized (XposedModule.class) {
-                    if (!reloadRequested) {
-                        loadConfigThread = null;
-                        return;
+                while (reloadRequested.getAndSet(false)) {
+                    ConfigSnapshot previous = config;
+                    try {
+                        reloadLatestConfig();
+                        isBootComplete = true;
+                        notifyConfigLoaded(previous);
+                    } catch (Throwable e) {
+                        printLog("Config reload failed: " + e.getMessage());
                     }
-                    reloadRequested = false;
                 }
-                ConfigSnapshot previous = config;
-                try {
-                    reloadLatestConfig();
-                    isBootComplete = true;
-                    notifyConfigLoaded(previous);
-                } catch (Throwable e) {
-                    printLog("Config reload failed: " + e.getMessage());
-                }
+                reloadRunning.set(false);
+                // A request that arrived after the inner loop ended must not be lost.
+                if (!reloadRequested.get() || !reloadRunning.compareAndSet(false, true)) return;
             }
         }, "hyperfcm-config");
-        loadConfigThread.start();
+        loader.setDaemon(true);
+        loader.start();
     }
 
     private static void reloadLatestConfig() throws Throwable {
@@ -333,7 +367,8 @@ public abstract class XposedModule {
     }
 
     /** Config reload and status request, both only from the module app (signature permission). */
-    private static synchronized boolean initReceivers() {
+    /** Only called with {@link #INIT_LOCK} held. */
+    private static boolean initReceivers() {
         if (context == null) return false;
         if (!receiversRegistered) {
             try {

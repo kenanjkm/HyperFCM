@@ -102,7 +102,8 @@ public class HyperOsFix extends XposedModule {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     String target = explicitTarget((Intent) param.args[intentIndex]);
-                    if (target == null) return;
+                    // Fast exit: almost every call happens with no FCM window open.
+                    if (target == null || !DeliveryWindow.isOpen(target)) return;
                     int uid = packageUid(target);
                     if (inWindow(uid, target)) {
                         printLog("service start allowed in FCM window: " + target, true);
@@ -132,10 +133,12 @@ public class HyperOsFix extends XposedModule {
                 int calleeUid = (Integer) param.args[3];
                 String calleePkg = (String) param.args[4];
                 if (intent == null || calleePkg == null) return;
-                boolean gmsCaller = isGmsUid(callerUid);
-                boolean fcm = gmsCaller && FcmTrust.RECEIVE.equals(intent.getAction())
+                // Cheap checks first; the GMS UID lookup only runs for a candidate FCM delivery.
+                boolean fcmShape = FcmTrust.RECEIVE.equals(intent.getAction())
                         && calleePkg.equals(explicitTarget(intent)) && isDeliveryTargetAllowed(calleePkg);
-                if (fcm) {
+                if (!fcmShape && !inWindow(calleeUid, calleePkg)) return;
+                boolean gmsCaller = isGmsUid(callerUid);
+                if (fcmShape && gmsCaller) {
                     DeliveryWindow.begin(calleePkg);
                 } else if (!(inWindow(calleeUid, calleePkg) && (gmsCaller || callerUid == calleeUid))) {
                     return;
