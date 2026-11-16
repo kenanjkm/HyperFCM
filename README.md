@@ -27,6 +27,11 @@ auto-start. HyperFCM fixes both for the apps you choose.
   the background. This costs battery.
 - **Keep notifications** (optional). Notifications of an allowed app survive when the system stops
   the app, for example after clearing recents.
+- **Notification sounds play to the end** (optional). When an allowed app updates a notification
+  right after it alerted, its sound and vibration are no longer cut off. Calls and alarms still stop.
+- **Always alert for allowed apps** (optional). Allowed apps make their sound even when hidden on the
+  lock screen or filed as unimportant. Do Not Disturb, silent and vibrate mode still apply. Needs
+  System UI in the module scope.
 - **Hook status.** Shows every hook group, whether it installed, and how often the system has called
   it since boot. You get one notification if a hook fails after a system update.
 - **Boot guard.** If the phone fails to finish booting three times in a row, the module stops
@@ -53,8 +58,9 @@ policy let more apps run in the background.
 ## Install
 
 1. Download the APK from [Releases](../../releases) and install it.
-2. In LSPosed, enable HyperFCM. Keep the recommended scope: **System Framework** and
-   **Battery and performance** (`com.miui.powerkeeper`).
+2. In LSPosed, enable HyperFCM. Keep the recommended scope: **System Framework**,
+   **Battery and performance** (`com.miui.powerkeeper`) and **System UI** (`com.android.systemui`,
+   only needed for "Always alert for allowed apps").
 3. Reboot.
 4. Open HyperFCM. The home page should say "Module is active" and "All hooks are working".
 5. On the Apps page, allow the apps that should be woken by push.

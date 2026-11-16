@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+- New option "Let notification sounds finish": when an allowed app updates a notification right after it alerted (for example WhatsApp adding its summary), the sound and vibration play to the end instead of being cut off. Ringing calls and insistent alarms still stop at once.
+- New option "Always alert for allowed apps": HyperOS System UI no longer silences an allowed app because it is hidden on the lock screen or folded as unimportant. Do Not Disturb, silent and vibrate mode, silent channels and your per-app sound settings still apply. Add System UI (com.android.systemui) to HyperFCM's LSPosed scope and reboot.
+- Both options are off by default. Neither adds wakelocks, alarms or periodic work.
+
 ## 1.0.3
 
 - Frozen push apps (Telegram and similar) get their messages on time on the CN ROM. With the "global freezer policy" option on, HyperFCM also turns on the ROM's global network control for frozen apps (`config_greezer_global_net_enable`), which the CN ROM ships off. The ROM then closes a frozen app's sockets, so its server falls back to FCM instead of holding messages until the app is opened.
