@@ -74,6 +74,8 @@
     <string name="auto_allow_summary">新安装的 FCM 应用默认开启</string>
     <string name="keep_notif_title">应用被停止时保留通知</string>
     <string name="keep_notif_summary">系统停止已允许的应用时（例如清理最近任务后）保留其现有通知</string>
+    <string name="keep_alert_title">完整播放通知提示音</string>
+    <string name="keep_alert_summary">已允许的应用在提示后立即更新通知时，提示音和振动会完整播放，而不会被中断。来电铃声和闹钟不受影响。</string>
     <string name="icebox_title">唤醒被冰箱冻结的应用</string>
     <string name="icebox_summary">推送到达时尝试启用被冰箱禁用的应用。需要安装冰箱；与 HyperOS 冻结机制无关</string>
     <string name="greeze_group">冻结与内存</string>

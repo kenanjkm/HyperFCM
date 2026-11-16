@@ -61,6 +61,7 @@ private const val PROJECT_URL = "https://github.com/kenanjkm/HyperFCM"
 data class ModuleConfig(
     val allowedPackages: Set<String> = emptySet(),
     val disableAutoCleanNotification: Boolean = false,
+    val keepAlertOnUpdate: Boolean = defaultValue(KEY_KEEP_ALERT_ON_UPDATE),
     val includeIceBoxDisabledApps: Boolean = false,
     val keepGmsAwake: Boolean = defaultValue(KEY_KEEP_GMS_AWAKE),
     val autoAllowNewApps: Boolean = defaultValue(KEY_AUTO_ALLOW_NEW_APPS),
@@ -458,6 +459,7 @@ class MainActivity : ComponentActivity() {
     private fun configFromSnapshot(snapshot: ConfigSnapshot) = ModuleConfig(
         allowedPackages = snapshot.allowList.toSet(),
         disableAutoCleanNotification = snapshot.options.getValue(KEY_DISABLE_AUTO_CLEAN_NOTIFICATION),
+        keepAlertOnUpdate = snapshot.options.getValue(KEY_KEEP_ALERT_ON_UPDATE),
         includeIceBoxDisabledApps = snapshot.options.getValue(KEY_INCLUDE_ICEBOX_DISABLED_APP),
         keepGmsAwake = snapshot.options.getValue(KEY_KEEP_GMS_AWAKE),
         autoAllowNewApps = snapshot.options.getValue(KEY_AUTO_ALLOW_NEW_APPS),
@@ -574,6 +576,7 @@ class MainActivity : ComponentActivity() {
         .put(KEY_SLEEP_MODE_KEEP_DATA, sleepModeKeepMobileData)
         .put(KEY_GREEZE_GLOBAL_POLICY, greezeGlobalPolicy)
         .put(KEY_DISABLE_AUTO_CLEAN_NOTIFICATION, disableAutoCleanNotification)
+        .put(KEY_KEEP_ALERT_ON_UPDATE, keepAlertOnUpdate)
         .put(KEY_INCLUDE_ICEBOX_DISABLED_APP, includeIceBoxDisabledApps)
         .put(KEY_KEEP_GMS_AWAKE, keepGmsAwake)
 

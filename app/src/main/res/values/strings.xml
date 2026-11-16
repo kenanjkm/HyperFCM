@@ -75,6 +75,8 @@
     <string name="auto_allow_summary">Newly installed FCM apps are allowed by default</string>
     <string name="keep_notif_title">Keep notifications when an app is stopped</string>
     <string name="keep_notif_summary">Existing notifications stay when the system stops an allowed app, for example after clearing recents</string>
+    <string name="keep_alert_title">Let notification sounds finish</string>
+    <string name="keep_alert_summary">When an allowed app updates a notification right after it alerted, the sound and vibration play to the end instead of being cut off. Ringing calls and alarms are not affected.</string>
     <string name="icebox_title">Wake apps disabled by Ice Box</string>
     <string name="icebox_summary">When a push arrives, tries to enable an app that Ice Box disabled. Needs the Ice Box app; unrelated to the HyperOS freezer</string>
     <string name="greeze_group">Freezer and memory</string>

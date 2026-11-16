@@ -658,6 +658,12 @@ private fun SettingsPage(
                     onCheckedChange = { onConfigChange(config.copy(disableAutoCleanNotification = it)) }
                 )
                 SwitchPreference(
+                    title = stringResource(R.string.keep_alert_title),
+                    summary = stringResource(R.string.keep_alert_summary),
+                    checked = config.keepAlertOnUpdate,
+                    onCheckedChange = { onConfigChange(config.copy(keepAlertOnUpdate = it)) }
+                )
+                SwitchPreference(
                     title = stringResource(R.string.icebox_title),
                     summary = stringResource(R.string.icebox_summary),
                     checked = config.includeIceBoxDisabledApps,

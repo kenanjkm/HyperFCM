@@ -74,6 +74,8 @@
     <string name="auto_allow_summary">Yeni kurulan FCM uygulamalarına varsayılan olarak izin verilir</string>
     <string name="keep_notif_title">Uygulama durdurulunca bildirimleri koru</string>
     <string name="keep_notif_summary">Sistem izinli bir uygulamayı durdurduğunda (örneğin son uygulamalar temizlenince) mevcut bildirimleri silinmez</string>
+    <string name="keep_alert_title">Bildirim sesini yarıda kesme</string>
+    <string name="keep_alert_summary">İzinli bir uygulama, ses çalarken bildirimini güncellerse ses ve titreşim yarıda kesilmez, sonuna kadar çalar. Çalan aramalar ve alarmlar etkilenmez.</string>
     <string name="icebox_title">Ice Box\'ın devre dışı bıraktığı uygulamaları uyandır</string>
     <string name="icebox_summary">Bildirim geldiğinde Ice Box\'ın devre dışı bıraktığı uygulamayı etkinleştirmeyi dener. Ice Box uygulaması gerekir; HyperOS dondurucusuyla ilgisi yoktur</string>
     <string name="greeze_group">Dondurucu ve bellek</string>

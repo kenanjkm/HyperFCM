@@ -11,6 +11,7 @@ import io.github.kenanjkm.hyperfcm.util.HookStatus;
 import io.github.kenanjkm.hyperfcm.xposed.BroadcastFix;
 import io.github.kenanjkm.hyperfcm.xposed.HookInstaller;
 import io.github.kenanjkm.hyperfcm.xposed.HyperOsFix;
+import io.github.kenanjkm.hyperfcm.xposed.KeepAlertOnUpdate;
 import io.github.kenanjkm.hyperfcm.xposed.KeepNotification;
 import io.github.kenanjkm.hyperfcm.xposed.NewAppInstallReceiver;
 import io.github.kenanjkm.hyperfcm.xposed.PowerKeeperFix;
@@ -38,6 +39,7 @@ public class XposedMain extends io.github.libxposed.api.XposedModule {
             HookInstaller.install("Boot guard", () -> { });
             new BroadcastFix(classLoader);
             new KeepNotification(classLoader);
+            new KeepAlertOnUpdate(classLoader);
             HookInstaller.install("Install receiver", () -> new NewAppInstallReceiver(classLoader));
             if (XposedHelpers.findClassIfExists("com.miui.server.greeze.GreezeManagerService", classLoader) == null) {
                 HookStatus.record("HyperOS", false, "Greeze not found: this ROM is not HyperOS");
