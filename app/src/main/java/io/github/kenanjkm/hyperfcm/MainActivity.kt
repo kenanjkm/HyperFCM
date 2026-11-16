@@ -62,6 +62,7 @@ data class ModuleConfig(
     val allowedPackages: Set<String> = emptySet(),
     val disableAutoCleanNotification: Boolean = false,
     val keepAlertOnUpdate: Boolean = defaultValue(KEY_KEEP_ALERT_ON_UPDATE),
+    val alwaysAlert: Boolean = defaultValue(KEY_ALWAYS_ALERT),
     val includeIceBoxDisabledApps: Boolean = false,
     val keepGmsAwake: Boolean = defaultValue(KEY_KEEP_GMS_AWAKE),
     val autoAllowNewApps: Boolean = defaultValue(KEY_AUTO_ALLOW_NEW_APPS),
@@ -259,7 +260,9 @@ class MainActivity : ComponentActivity() {
                     // PowerKeeper's groups only count when they come from the same boot.
                     val powerKeeper = read(HookStatus.SOURCE_POWERKEEPER)
                         ?.takeIf { kotlin.math.abs(it.bootTime - system.bootTime) < 60_000L }
-                    val hooks = (system.hooks + powerKeeper?.hooks.orEmpty())
+                    val systemUi = read(HookStatus.SOURCE_SYSTEMUI)
+                        ?.takeIf { kotlin.math.abs(it.bootTime - system.bootTime) < 60_000L }
+                    val hooks = (system.hooks + powerKeeper?.hooks.orEmpty() + systemUi?.hooks.orEmpty())
                         .map { HookEntry(it.name, it.ok, it.detail, it.calls, it.last) }
                     HookReport(system.time, system.bootTime, system.safeMode, hooks)
                 }.getOrNull()
@@ -460,6 +463,7 @@ class MainActivity : ComponentActivity() {
         allowedPackages = snapshot.allowList.toSet(),
         disableAutoCleanNotification = snapshot.options.getValue(KEY_DISABLE_AUTO_CLEAN_NOTIFICATION),
         keepAlertOnUpdate = snapshot.options.getValue(KEY_KEEP_ALERT_ON_UPDATE),
+        alwaysAlert = snapshot.options.getValue(KEY_ALWAYS_ALERT),
         includeIceBoxDisabledApps = snapshot.options.getValue(KEY_INCLUDE_ICEBOX_DISABLED_APP),
         keepGmsAwake = snapshot.options.getValue(KEY_KEEP_GMS_AWAKE),
         autoAllowNewApps = snapshot.options.getValue(KEY_AUTO_ALLOW_NEW_APPS),
@@ -577,6 +581,7 @@ class MainActivity : ComponentActivity() {
         .put(KEY_GREEZE_GLOBAL_POLICY, greezeGlobalPolicy)
         .put(KEY_DISABLE_AUTO_CLEAN_NOTIFICATION, disableAutoCleanNotification)
         .put(KEY_KEEP_ALERT_ON_UPDATE, keepAlertOnUpdate)
+        .put(KEY_ALWAYS_ALERT, alwaysAlert)
         .put(KEY_INCLUDE_ICEBOX_DISABLED_APP, includeIceBoxDisabledApps)
         .put(KEY_KEEP_GMS_AWAKE, keepGmsAwake)
 

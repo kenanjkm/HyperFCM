@@ -17,6 +17,8 @@ public final class ConfigSchema {
     public static final String KEY_GREEZE_GLOBAL_POLICY = "greezeGlobalPolicy";
     /** Let a short notification sound or vibration finish when the app updates that notification. */
     public static final String KEY_KEEP_ALERT_ON_UPDATE = "keepAlertOnUpdate";
+    /** Allowed apps alert even when locked and hidden on the lock screen, or folded as unimportant. */
+    public static final String KEY_ALWAYS_ALERT = "alwaysAlert";
     public static final String KEY_INSTALL_EVENTS = "installEvents";
     /** Packages the user chose to keep out of the freezer and the memory killer (costs battery). */
     public static final String KEY_PROTECTED_APPS = "protectedApps";
@@ -24,7 +26,8 @@ public final class ConfigSchema {
     public static final List<String> RETIRED_KEYS = List.of();
     public static final List<String> OPTIONS = List.of(KEY_DISABLE_AUTO_CLEAN_NOTIFICATION,
             KEY_INCLUDE_ICEBOX_DISABLED_APP, KEY_KEEP_GMS_AWAKE, KEY_AUTO_ALLOW_NEW_APPS,
-            KEY_SLEEP_MODE_KEEP_DATA, KEY_GREEZE_GLOBAL_POLICY, KEY_KEEP_ALERT_ON_UPDATE);
+            KEY_SLEEP_MODE_KEEP_DATA, KEY_GREEZE_GLOBAL_POLICY, KEY_KEEP_ALERT_ON_UPDATE,
+            KEY_ALWAYS_ALERT);
     public static boolean defaultValue(String key) {
         return KEY_KEEP_GMS_AWAKE.equals(key) || KEY_AUTO_ALLOW_NEW_APPS.equals(key);
     }

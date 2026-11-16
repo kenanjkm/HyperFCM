@@ -76,6 +76,8 @@
     <string name="keep_notif_summary">Sistem izinli bir uygulamayı durdurduğunda (örneğin son uygulamalar temizlenince) mevcut bildirimleri silinmez</string>
     <string name="keep_alert_title">Bildirim sesini yarıda kesme</string>
     <string name="keep_alert_summary">İzinli bir uygulama, ses çalarken bildirimini güncellerse ses ve titreşim yarıda kesilmez, sonuna kadar çalar. Çalan aramalar ve alarmlar etkilenmez.</string>
+    <string name="always_alert_title">İzinli uygulamalarda her zaman ses</string>
+    <string name="always_alert_summary">İzinli uygulamalar kilit ekranında gizli olsalar ya da HyperOS onları önemsiz diye katlasa bile ses ve titreşim verir. Rahatsız Etmeyin, sessiz ve titreşim modu ile sessize aldığınız uygulama ve kanallar yine geçerlidir. Modül kapsamında Sistem Arayüzü seçili olmalı ve yeniden başlatma gerekir.</string>
     <string name="icebox_title">Ice Box\'ın devre dışı bıraktığı uygulamaları uyandır</string>
     <string name="icebox_summary">Bildirim geldiğinde Ice Box\'ın devre dışı bıraktığı uygulamayı etkinleştirmeyi dener. Ice Box uygulaması gerekir; HyperOS dondurucusuyla ilgisi yoktur</string>
     <string name="greeze_group">Dondurucu ve bellek</string>

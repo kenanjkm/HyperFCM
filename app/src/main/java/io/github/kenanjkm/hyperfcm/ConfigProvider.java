@@ -19,6 +19,19 @@ import org.json.JSONObject;
 /** Only the module itself and system-UID processes (system_server, PowerKeeper) can read configuration. */
 public class ConfigProvider extends ContentProvider {
     @Override public boolean onCreate() { return true; }
+    private boolean isSystemUi(int uid) {
+        long identity = Binder.clearCallingIdentity();
+        try {
+            String[] packages = getContext().getPackageManager().getPackagesForUid(uid);
+            if (packages == null) return false;
+            for (String name : packages) {
+                if (io.github.kenanjkm.hyperfcm.util.HookStatus.SOURCE_SYSTEMUI.equals(name)) return true;
+            }
+            return false;
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
     private void requireReader() {
         int uid = Binder.getCallingUid();
         if (uid != Process.myUid() && uid != Process.SYSTEM_UID)
@@ -44,10 +57,13 @@ public class ConfigProvider extends ContentProvider {
         if ("newAppInstalled".equals(method)) {
             return io.github.kenanjkm.hyperfcm.util.NewAppInstallStore.handle(getContext(), arg, extras);
         }
-        requireReader();
-        if (io.github.kenanjkm.hyperfcm.util.HookStatus.METHOD.equals(method)) {
+        boolean hookStatus = io.github.kenanjkm.hyperfcm.util.HookStatus.METHOD.equals(method);
+        if (!hookStatus) requireReader();
+        if (hookStatus) {
             Bundle result = new Bundle();
-            if (Binder.getCallingUid() != Process.SYSTEM_UID || extras == null) throw new SecurityException("Invalid hook status source");
+            int caller = Binder.getCallingUid();
+            boolean systemUi = caller != Process.SYSTEM_UID && isSystemUi(caller);
+            if ((caller != Process.SYSTEM_UID && !systemUi) || extras == null) throw new SecurityException("Invalid hook status source");
             String json = extras.getString(io.github.kenanjkm.hyperfcm.util.HookStatus.EXTRA_JSON);
             if (json == null || json.length() > 64 * 1024) return result;
             long identity = Binder.clearCallingIdentity();
@@ -55,6 +71,10 @@ public class ConfigProvider extends ContentProvider {
                 JSONObject parsed = new JSONObject(json); // validate before writing
                 io.github.kenanjkm.hyperfcm.util.HookStatus.Snapshot snapshot =
                         new io.github.kenanjkm.hyperfcm.util.HookStatus.Snapshot(parsed);
+                // SystemUI may only report for itself; the system uid never reports as SystemUI.
+                if (systemUi != io.github.kenanjkm.hyperfcm.util.HookStatus.SOURCE_SYSTEMUI.equals(snapshot.source)) {
+                    return result;
+                }
                 String name = io.github.kenanjkm.hyperfcm.util.HookStatus.fileFor(snapshot.source);
                 if (name == null) return result;
                 java.io.File file = new java.io.File(getContext().getFilesDir(), name);

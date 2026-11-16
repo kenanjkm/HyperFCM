@@ -25,11 +25,13 @@ public final class HookStatus {
     public static final String EXTRA_JSON = "json";
     public static final String SOURCE_SYSTEM = "android";
     public static final String SOURCE_POWERKEEPER = "com.miui.powerkeeper";
+    public static final String SOURCE_SYSTEMUI = "com.android.systemui";
 
     /** File the provider stores a source's report in; null for an unknown source. */
     public static String fileFor(String source) {
         if (SOURCE_SYSTEM.equals(source)) return "hook-status.json";
         if (SOURCE_POWERKEEPER.equals(source)) return "hook-status-powerkeeper.json";
+        if (SOURCE_SYSTEMUI.equals(source)) return "hook-status-systemui.json";
         return null;
     }
 
