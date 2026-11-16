@@ -11,6 +11,7 @@ import io.github.kenanjkm.hyperfcm.libxposed.XposedBridge;
 import io.github.kenanjkm.hyperfcm.libxposed.XposedHelpers;
 import io.github.kenanjkm.hyperfcm.util.AlwaysAlertPolicy;
 import io.github.kenanjkm.hyperfcm.util.ConfigSchema;
+import io.github.kenanjkm.hyperfcm.util.MiuiSoundDefaults;
 
 /**
  * Runs in HyperOS SystemUI. MiuiAlertManager#buzzBeepBlink picks the effects of a new notification
@@ -25,6 +26,7 @@ public class SystemUiAlert extends XposedModule {
     public SystemUiAlert(ClassLoader classLoader) {
         super(classLoader);
         HookInstaller.install("Always alert (SystemUI)", this::startHook);
+        HookInstaller.install("Sound defaults (SystemUI)", this::hookSoundDefaults);
     }
 
     private static Field field(Class<?> clazz, String name) throws NoSuchFieldException {
@@ -105,5 +107,43 @@ public class SystemUiAlert extends XposedModule {
                 param.setResult(null);
             }
         });
+    }
+
+    private static Boolean readSwitch(android.content.SharedPreferences prefs, String key) {
+        if (key == null || !prefs.contains(key)) return null;
+        return prefs.getBoolean(key, false);
+    }
+
+    /**
+     * NotificationSettingsManager#canSound/#canVibrate(Context, String pkg, String channel): on the
+     * China ROM a channel the user never set is silent unless the app is on Xiaomi's whitelist.
+     * For allowed apps an unset switch counts as on; a switch the user turned off stays off.
+     */
+    protected void hookSoundDefaults() throws Throwable {
+        Class<?> settings = XposedHelpers.findClass(
+                "com.miui.systemui.notification.NotificationSettingsManager", classLoader);
+        String[][] targets = {{"canSound", "sound"}, {"canVibrate", "vibrate"}};
+        for (String[] target : targets) {
+            Method method = settings.getDeclaredMethod(target[0],
+                    android.content.Context.class, String.class, String.class);
+            final String suffix = target[1];
+            XposedBridge.hookMethod(method, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    if (Boolean.TRUE.equals(param.getResult())) return;
+                    if (!getBooleanConfig(ConfigSchema.KEY_ALWAYS_ALERT, false)) return;
+                    android.content.Context context = (android.content.Context) param.args[0];
+                    String pkg = (String) param.args[1];
+                    String channel = (String) param.args[2];
+                    if (context == null || pkg == null || !targetIsAllow(pkg)) return;
+                    android.content.SharedPreferences prefs =
+                            context.getSharedPreferences(MiuiSoundDefaults.PREFS, 4);
+                    boolean result = MiuiSoundDefaults.allow(true, true, false,
+                            readSwitch(prefs, MiuiSoundDefaults.appKey(pkg, suffix)),
+                            readSwitch(prefs, MiuiSoundDefaults.channelKey(pkg, channel, suffix)));
+                    if (result) param.setResult(true);
+                }
+            });
+        }
     }
 }
