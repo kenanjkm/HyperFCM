@@ -11,9 +11,11 @@ import io.github.kenanjkm.hyperfcm.util.HookStatus;
 import io.github.kenanjkm.hyperfcm.xposed.BroadcastFix;
 import io.github.kenanjkm.hyperfcm.xposed.HookInstaller;
 import io.github.kenanjkm.hyperfcm.xposed.HyperOsFix;
+import io.github.kenanjkm.hyperfcm.xposed.KeepAlertOnUpdate;
 import io.github.kenanjkm.hyperfcm.xposed.KeepNotification;
 import io.github.kenanjkm.hyperfcm.xposed.NewAppInstallReceiver;
 import io.github.kenanjkm.hyperfcm.xposed.PowerKeeperFix;
+import io.github.kenanjkm.hyperfcm.xposed.SystemUiAlert;
 import io.github.kenanjkm.hyperfcm.xposed.XposedModule;
 
 import io.github.libxposed.api.XposedModuleInterface;
@@ -22,6 +24,7 @@ public class XposedMain extends io.github.libxposed.api.XposedModule {
     /** A boot counts as finished once system_server has stayed alive this long. */
     private static final long BOOT_FINISHED_AFTER_MS = 120_000L;
     private boolean powerKeeperHooksInitialized;
+    private boolean systemUiHooksInitialized;
     private volatile Context systemContext;
 
     @Override
@@ -38,6 +41,7 @@ public class XposedMain extends io.github.libxposed.api.XposedModule {
             HookInstaller.install("Boot guard", () -> { });
             new BroadcastFix(classLoader);
             new KeepNotification(classLoader);
+            new KeepAlertOnUpdate(classLoader);
             HookInstaller.install("Install receiver", () -> new NewAppInstallReceiver(classLoader));
             if (XposedHelpers.findClassIfExists("com.miui.server.greeze.GreezeManagerService", classLoader) == null) {
                 HookStatus.record("HyperOS", false, "Greeze not found: this ROM is not HyperOS");
@@ -52,6 +56,18 @@ public class XposedMain extends io.github.libxposed.api.XposedModule {
     @Override
     public synchronized void onPackageReady(XposedModuleInterface.PackageReadyParam param) {
         XposedBridge.init(this);
+        if (HookStatus.SOURCE_SYSTEMUI.equals(param.getPackageName())) {
+            if (systemUiHooksInitialized) return;
+            systemUiHooksInitialized = true;
+            XposedModule.setProcessName(HookStatus.SOURCE_SYSTEMUI);
+            if (BootGuard.read(new File(BootGuard.FILE)).tripped) {
+                XposedBridge.log("boot guard: safe mode, SystemUI hooks are NOT installed");
+                return;
+            }
+            new SystemUiAlert(param.getClassLoader());
+            attachApplicationContext();
+            return;
+        }
         if (!HookStatus.SOURCE_POWERKEEPER.equals(param.getPackageName()) || powerKeeperHooksInitialized) return;
         powerKeeperHooksInitialized = true;
         XposedModule.setProcessName(HookStatus.SOURCE_POWERKEEPER);

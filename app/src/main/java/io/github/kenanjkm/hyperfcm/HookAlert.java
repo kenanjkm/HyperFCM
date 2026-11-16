@@ -25,7 +25,8 @@ final class HookAlert {
             NotificationManager manager = context.getSystemService(NotificationManager.class);
             if (manager == null) return;
             // One notification per reporting process, so a healthy report never hides another's failure.
-            final int ID = HookStatus.SOURCE_SYSTEM.equals(snapshot.source) ? 1 : 2;
+            final int ID = HookStatus.SOURCE_SYSTEM.equals(snapshot.source) ? 1
+                    : HookStatus.SOURCE_SYSTEMUI.equals(snapshot.source) ? 3 : 2;
             List<String> failed = snapshot.failed();
             android.content.SharedPreferences seen = context.getSharedPreferences("hook_alert", Context.MODE_PRIVATE);
             String key = "last_" + ID;
