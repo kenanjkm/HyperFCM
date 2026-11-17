@@ -77,7 +77,7 @@
     <string name="keep_alert_title">完整播放通知提示音</string>
     <string name="keep_alert_summary">已允许的应用在提示后立即更新通知时，提示音和振动会完整播放，而不会被中断。来电铃声和闹钟不受影响。</string>
     <string name="always_alert_title">已允许的应用始终提醒</string>
-    <string name="always_alert_summary">即使已允许的应用在锁屏上被隐藏，或被 HyperOS 折叠为不重要通知，也会发出提示音和振动。勿扰模式、静音和振动模式以及您设为静音的应用或渠道仍然有效。需要在模块作用域中勾选系统界面并重启。</string>
+    <string name="always_alert_summary">即使 HyperOS 会让已允许的应用保持安静，它们也会发出提示音和振动：包括您从未设置过的渠道（国行 ROM 会静音不在小米名单中的应用）、在锁屏上隐藏的应用，以及被折叠为不重要的通知。勿扰模式、静音和振动模式以及您设为静音的应用或渠道仍然有效。需要在模块作用域中勾选系统界面并重启。</string>
     <string name="icebox_title">唤醒被冰箱冻结的应用</string>
     <string name="icebox_summary">推送到达时尝试启用被冰箱禁用的应用。需要安装冰箱；与 HyperOS 冻结机制无关</string>
     <string name="greeze_group">冻结与内存</string>

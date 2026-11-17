@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.5
+
+- "Always alert for allowed apps" now also covers HyperOS's default sound rule: on the China ROM, System UI gives no sound or vibration to any channel you never set, unless the app is on Xiaomi's whitelist (this is why apps like Duolingo, Gmail or Claude stayed silent). For allowed apps an unset switch now counts as on; a sound or vibration switch you turned off in the app's notification settings still wins.
+
 ## 1.0.4
 
 - New option "Let notification sounds finish": when an allowed app updates a notification right after it alerted (for example WhatsApp adding its summary), the sound and vibration play to the end instead of being cut off. Ringing calls and insistent alarms still stop at once.

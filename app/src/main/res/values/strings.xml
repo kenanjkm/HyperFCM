@@ -78,7 +78,7 @@
     <string name="keep_alert_title">Let notification sounds finish</string>
     <string name="keep_alert_summary">When an allowed app updates a notification right after it alerted, the sound and vibration play to the end instead of being cut off. Ringing calls and alarms are not affected.</string>
     <string name="always_alert_title">Always alert for allowed apps</string>
-    <string name="always_alert_summary">Allowed apps make their sound and vibration even when they are hidden on the lock screen or HyperOS files them as unimportant. Do Not Disturb, silent and vibrate mode, and apps or channels you set to silent still apply. Needs SystemUI in the module scope and a reboot.</string>
+    <string name="always_alert_summary">Allowed apps make their sound and vibration even when HyperOS would keep them quiet: channels you never set (the China ROM mutes apps outside Xiaomi\'s list), apps hidden on the lock screen, and notifications filed as unimportant. Do Not Disturb, silent and vibrate mode, and apps or channels you turned silent still apply. Needs System UI in the module scope and a reboot.</string>
     <string name="icebox_title">Wake apps disabled by Ice Box</string>
     <string name="icebox_summary">When a push arrives, tries to enable an app that Ice Box disabled. Needs the Ice Box app; unrelated to the HyperOS freezer</string>
     <string name="greeze_group">Freezer and memory</string>
